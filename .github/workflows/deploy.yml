@@ -37,8 +37,8 @@ jobs:
       - name: Install dependencies
         run: npm install
       
-      - name: Run monitor script
-        run: node src/run-monitor.js
+      # - name: Run monitor script
+      #   run: node src/run-monitor.js
       
       # Step 3: Copy data folder to web/dist
       - name: Copy data folder to web/dist
