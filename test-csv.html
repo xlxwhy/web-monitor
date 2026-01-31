@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV解析测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>CSV解析测试</h1>
+    
+    <div id="test-result" class="test-result"></div>
+    
+    <script>
+        // 复制前端使用的解析函数
+        function parseCSV(csvText) {
+            // 先移除所有换行符，然后按正确的方式重新分割行
+            // 处理被错误换行的CSV数据
+            const lines = [];
+            const headerLine = csvText.split('\n')[0].trim();
+            const headers = headerLine.split(',');
+            const expectedFields = headers.length;
+            
+            let currentLine = '';
+            const allLines = csvText.split('\n');
+            
+            for (let i = 0; i < allLines.length; i++) {
+                const line = allLines[i].trim();
+                if (!line) continue;
+                
+                if (currentLine) {
+                    // 合并行
+                    currentLine += line;
+                } else {
+                    // 新行
+                    currentLine = line;
+                }
+                
+                // 检查当前行的字段数是否匹配（粗略检查逗号数量）
+                const commaCount = (currentLine.match(/,/g) || []).length;
+                
+                if (commaCount >= expectedFields - 1) {
+                    // 字段数足够，添加到结果中
+                    lines.push(currentLine);
+                    currentLine = '';
+                }
+            }
+            
+            // 如果还有未处理完的行，也添加进去
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const values = line.split(',');
+                if (values.length < expectedFields) continue; // 至少需要预期的字段数
+                
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header.trim()] = values[index] ? values[index].trim() : '';
+                });
+                
+                // 转换数据类型
+                row.price = parseFloat(row.f2) || parseFloat(row.f43) || 0;
+                row.change = parseFloat(row.f1) || parseFloat(row.f44) || 0;
+                row.changePercent = parseFloat(row.f3) || parseFloat(row.f45) || 0;
+                row.volume = parseInt(row.f5) || parseInt(row.f46) || 0;
+                row.turnover = parseFloat(row.f6) || parseFloat(row.f47) || 0;
+                
+                // 处理不同文件的字段名差异
+                row.code = row.f12 || row.f57 || '';
+                row.name = row.f14 || row.f58 || '';
+                row.date = row.date || new Date().toISOString().split('T')[0];
+                
+                data.push(row);
+            }
+            
+            return data;
+        }
+        
+        // 测试函数
+        async function runTest() {
+            const resultDiv = document.getElementById('test-result');
+            
+            try {
+                // 获取CSV文件
+                const response = await fetch('/web-monitor/data/daily/EastmoneyStockData_2026-02-01.csv');
+                if (!response.ok) {
+                    throw new Error(`HTTP错误! 状态: ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                
+                // 测试解析
+                const parsedData = parseCSV(csvText);
+                
+                // 显示结果
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h2>测试成功!</h2>
+                        <p>原始文件大小: ${csvText.length} 字符</p>
+                        <p>原始行数: ${csvText.split('\n').length}</p>
+                        <p>解析后的数据行数: ${parsedData.length}</p>
+                        <h3>前10条数据:</h3>
+                        <pre>${JSON.stringify(parsedData.slice(0, 10), null, 2)}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h2>测试失败!</h2>
+                        <p>错误信息: ${error.message}</p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+            }
+        }
+        
+        // 页面加载时运行测试
+        window.addEventListener('load', runTest);
+    </script>
+</body>
+</html>
