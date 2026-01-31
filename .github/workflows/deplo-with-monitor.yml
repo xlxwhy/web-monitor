@@ -1,8 +1,14 @@
 name: Build and Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [ main ]
+  schedule:
+    # 中国时间工作日（周一到周五）9:15到15:15每5分钟执行一次
+    # UTC时间1:15-1:55，对应中国时间9:15-9:55，每5分钟一次
+    - cron: '15,20,25,30,35,40,45,50,55 1 * * 1-5'
+    # UTC时间2:00-6:59，对应中国时间10:00-14:59，每5分钟一次
+    - cron: '*/5 2-6 * * 1-5'
+    # UTC时间7:00-7:15，对应中国时间15:00-15:15，每5分钟一次
+    - cron: '0,5,10,15 7 * * 1-5'
 
 jobs:
   build-and-monitor:
@@ -29,8 +35,8 @@ jobs:
       - name: Install dependencies
         run: npm install
       
-      # - name: Run monitor script
-      #   run: node src/run-monitor.js
+      - name: Run monitor script
+        run: node src/run-monitor.js
       
       # Step 3: Copy data folder to web/dist
       - name: Copy data folder to web/dist
