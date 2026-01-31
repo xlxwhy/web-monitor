@@ -173,7 +173,7 @@ function saveMonitorData(monitorData, date = null) {
     // 1. 覆盖写入每日汇总CSV文件（每个文件只包含一天的数据）
     fs.writeFileSync(dataFile, csvContent);
     log(`API ${apiName} 第${monitorData.page}页数据覆盖写入CSV文件: ${dataFile}, 共 ${stockData.length} 条记录`);
-    
+
     // 2. 然后从daily文件中读取最新写入的数据，按股票维度补充到stock目录
     const addedLines = csvContent.trim().split('\n');
     // 移除标题行（如果存在）
@@ -214,7 +214,7 @@ function saveMonitorData(monitorData, date = null) {
             
             // 重新写入文件
             fs.writeFileSync(stockFile, fileContent);
-            log(`股票 ${stockId} 的数据已写入文件: ${stockFile}`);
+            // 移除股票级别的文件写入日志（减少大量重复日志）
         }
     });
 }
@@ -297,8 +297,7 @@ async function fetchSinglePage(apiConfig, pageNum, retryCount = 0, maxRetries = 
             jsonData = responseData;
         }
         
-        // 打印完整的响应数据结构
-        log(`API ${apiConfig.name} 第${pageNum}页 - 响应数据结构: ${JSON.stringify(jsonData, null, 2)}`);
+        // 移除完整响应数据结构的日志输出（减少日志量）
         
         let endTime = Date.now();
         log(`API ${apiConfig.name} 第${pageNum}页 - 请求成功，耗时 ${endTime - startTime}ms`);
