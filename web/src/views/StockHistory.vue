@@ -96,6 +96,50 @@ const pageSize = ref(10)
 // 图表实例
 let chartInstance = null
 
+// CSV解析函数
+const parseCSV = (csvText) => {
+  const lines = csvText.split('\n')
+  const headers = lines[0].split(',')
+  const data = []
+  
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (!line) continue
+    
+    const values = line.split(',')
+    if (values.length !== headers.length) continue
+    
+    const row = {}
+    headers.forEach((header, index) => {
+      row[header.trim()] = values[index].trim()
+    })
+    
+    // 转换数据类型
+    row.price = parseFloat(row.f43) || 0
+    row.change = parseFloat(row.f44) || 0
+    row.changePercent = parseFloat(row.f45) || 0
+    row.volume = parseInt(row.f46) || 0
+    row.turnover = parseFloat(row.f47) || 0
+    
+    // 处理不同文件的字段名差异
+    row.code = row.f57 || row.f12 || ''
+    row.name = row.f58 || row.f14 || ''
+    row.date = row.date || ''
+    
+    // 将日期格式从YYYYMMDD转换为YYYY-MM-DD
+    if (row.date && row.date.length === 8) {
+      row.date = `${row.date.substring(0, 4)}-${row.date.substring(4, 6)}-${row.date.substring(6, 8)}`
+    }
+    
+    data.push(row)
+  }
+  
+  // 按日期排序（最新的在前面）
+  data.sort((a, b) => new Date(b.date) - new Date(a.date))
+  
+  return data
+}
+
 // 获取股票历史数据
 const getStockHistory = async () => {
   if (!stockCode.value.trim()) {
@@ -105,14 +149,18 @@ const getStockHistory = async () => {
   
   isLoading.value = true
   try {
-    const response = await fetch(`/api/stock-history?code=${stockCode.value.trim()}`)
+    const code = stockCode.value.trim()
+    const filePath = `/data/stock/${code}.csv`
+    
+    // 直接从public目录读取CSV文件
+    const response = await fetch(filePath)
     if (!response.ok) {
-      throw new Error('网络请求失败')
+      throw new Error('未找到该股票的历史数据文件')
     }
     
-    const result = await response.json()
+    const csvText = await response.text()
+    stockData.value = parseCSV(csvText)
     
-    stockData.value = result.data || []
     // 如果有数据，获取股票名称
     if (stockData.value.length > 0) {
       stockName.value = stockData.value[0].name

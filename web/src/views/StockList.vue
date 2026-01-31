@@ -99,29 +99,89 @@ const tableData = ref([])
 const loading = ref(false)
 const isRefreshing = ref(false)
 
+// CSV解析函数
+const parseCSV = (csvText) => {
+  const lines = csvText.split('\n')
+  const headers = lines[0].split(',')
+  const data = []
+  
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (!line) continue
+    
+    const values = line.split(',')
+    if (values.length !== headers.length) continue
+    
+    const row = {}
+    headers.forEach((header, index) => {
+      row[header.trim()] = values[index].trim()
+    })
+    
+    // 转换数据类型
+    row.price = parseFloat(row.f43) || 0
+    row.change = parseFloat(row.f44) || 0
+    row.changePercent = parseFloat(row.f45) || 0
+    row.volume = parseInt(row.f46) || 0
+    row.turnover = parseFloat(row.f47) || 0
+    
+    // 处理不同文件的字段名差异
+    row.code = row.f57 || row.f12 || ''
+    row.name = row.f58 || row.f14 || ''
+    row.date = row.date || new Date().toISOString().split('T')[0]
+    
+    // 将日期格式从YYYYMMDD转换为YYYY-MM-DD
+    if (row.date && row.date.length === 8) {
+      row.date = `${row.date.substring(0, 4)}-${row.date.substring(4, 6)}-${row.date.substring(6, 8)}`
+    }
+    
+    data.push(row)
+  }
+  
+  return data
+}
+
 // 获取股票数据
 const getStockData = async () => {
   loading.value = true
   try {
-    const params = new URLSearchParams({
-      page: currentPage.value,
-      pageSize: pageSize.value,
-      search: searchQuery.value
-    })
+    // 构建文件名
+    const date = selectedDate.value || new Date().toISOString().split('T')[0]
+    const fileName = `EastmoneyStockData_${date}.csv`
+    const filePath = `/data/daily/${fileName}`
     
-    // 添加日期参数（如果有选择）
-    if (selectedDate.value) {
-      params.append('date', selectedDate.value)
-    }
-    
-    const response = await fetch(`/api/stock-data?${params}`)
+    // 直接从public目录读取CSV文件
+    const response = await fetch(filePath)
     if (!response.ok) {
-      throw new Error('网络请求失败')
+      // 如果指定日期的文件不存在，尝试获取最新的文件
+      const latestResponse = await fetch(`/data/daily/EastmoneyStockData_${new Date().toISOString().split('T')[0]}.csv`)
+      if (!latestResponse.ok) {
+        throw new Error('未找到股票数据文件')
+      }
+      
+      const csvText = await latestResponse.text()
+      const allData = parseCSV(csvText)
+      tableData.value = allData
+      total.value = allData.length
+      return
     }
     
-    const result = await response.json()
-    tableData.value = result.data || []
-    total.value = result.total || 0
+    const csvText = await response.text()
+    let allData = parseCSV(csvText)
+    
+    // 应用搜索过滤
+    if (searchQuery.value) {
+      const query = searchQuery.value.toLowerCase()
+      allData = allData.filter(row => 
+        row.code.toLowerCase().includes(query) || 
+        row.name.toLowerCase().includes(query)
+      )
+    }
+    
+    // 应用分页
+    total.value = allData.length
+    const startIndex = (currentPage.value - 1) * pageSize.value
+    const endIndex = startIndex + pageSize.value
+    tableData.value = allData.slice(startIndex, endIndex)
     
     // 如果数据为空，提示用户
     if (total.value === 0) {

@@ -87,11 +87,11 @@ if (require.main === module) {
     
     // 监控单个接口的本地实现
     async function monitorApi(apiConfig) {
+        const startTime = Date.now();
         try {
             // 复制原始配置，避免修改原始对象
             const originalConfig = JSON.parse(JSON.stringify(apiConfig));
             
-            const startTime = Date.now();
             const response = await axios({
                 url: apiConfig.url,
                 method: apiConfig.method || 'GET',
