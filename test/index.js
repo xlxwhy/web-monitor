@@ -69,8 +69,9 @@ if (require.main === module) {
     
     // 监控数据存储函数
     function saveMonitorData(data) {
-        const timestamp = new Date().toISOString().split('T')[0];
-        const dataFile = path.join(logsDir, `monitor_data_${timestamp}.json`);
+        // 使用API名称作为文件名的一部分
+        const apiName = data.api;
+        const dataFile = path.join(logsDir, `monitor_data_${apiName}.json`);
         
         let existingData = [];
         if (fs.existsSync(dataFile)) {

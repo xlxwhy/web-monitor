@@ -26,8 +26,9 @@ function log(message, level = 'info') {
 
 // 监控数据存储函数
 function saveMonitorData(data) {
-    const timestamp = new Date().toISOString().split('T')[0];
-    const dataFile = path.join(logsDir, `monitor_data_${timestamp}.json`);
+    // 使用API名称作为文件名的一部分
+    const apiName = data.api;
+    const dataFile = path.join(logsDir, `monitor_data_${apiName}.json`);
     
     let existingData = [];
     if (fs.existsSync(dataFile)) {
@@ -147,14 +148,20 @@ app.get('/health', (req, res) => {
 
 // 获取监控数据接口
 app.get('/monitor-data', (req, res) => {
-    const date = req.query.date || new Date().toISOString().split('T')[0];
-    const dataFile = path.join(logsDir, `monitor_data_${date}.json`);
+    const apiName = req.query.api;
+    
+    if (!apiName) {
+        res.status(400).json({ error: 'API name is required' });
+        return;
+    }
+    
+    const dataFile = path.join(logsDir, `monitor_data_${apiName}.json`);
     
     if (fs.existsSync(dataFile)) {
         const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
         res.json(data);
     } else {
-        res.status(404).json({ error: 'No data found for the specified date' });
+        res.status(404).json({ error: `No data found for API: ${apiName}` });
     }
 });
 
