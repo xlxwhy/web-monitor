@@ -35,7 +35,8 @@
       "dataProcessor": "eastmoneyProcessor",
       "delay": 1000,
       "timeout": 35000,
-      "retry": 3
+      "retry": 3,
+      "cron": "0 9 * * *"
     }
   ]
 }

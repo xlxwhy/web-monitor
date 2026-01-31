@@ -12,6 +12,9 @@ const { log, monitorApi, saveMonitorData } = monitorUtils;
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 配置JSON解析中间件
+app.use(express.json());
+
 // 加载配置文件
 const config = require(path.join(__dirname, '../config/apis.json'));
 
@@ -29,10 +32,15 @@ if (!fs.existsSync(dataDir)) {
 
 // 使用监控工具模块中的日志函数
 
-// 设置静态文件目录为Vue项目的public文件夹
-const staticDir = path.join(__dirname, '../../web/src/public');
+// 设置静态文件目录为Vue项目的dist文件夹
+// 正确路径：从src目录向上一层到web-monitor目录，然后加上/web/dist
+const staticDir = path.join(__dirname, '../web/dist');
+// 先确保能直接访问静态资源
 app.use(express.static(staticDir));
+// 再添加/web-monitor/前缀映射
+app.use('/web-monitor', express.static(staticDir));
 log(`静态文件目录已设置为: ${staticDir}`);
+log('静态文件访问路径前缀: /web-monitor');
 
 // 使用监控工具模块中的数据存储函数
 
@@ -369,8 +377,7 @@ app.post('/api/trigger-monitor', async (req, res) => {
 });
 
 // 配置回退路由，处理Vue Router history模式下的页面刷新
-// 匹配所有非API、非健康检查和非静态文件的路径，但允许以/api开头的前端路由
-app.get(/^(?!\/api\/|\/health|\/static).*/, (req, res) => {
+app.get(/^\/web-monitor\/.*/, (req, res) => {
     // 确保只处理前端路由，不影响静态文件和已定义的API
     res.sendFile(path.join(staticDir, 'index.html'));
 });
