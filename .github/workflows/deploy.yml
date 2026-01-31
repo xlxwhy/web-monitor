@@ -1,11 +1,19 @@
-name: Deploy to GitHub Pages
+name: Build and Deploy to GitHub Pages
 
 on:
   push:
     branches: [ main ]
+  schedule:
+    # 中国时间工作日（周一到周五）9:15到15:15每5分钟执行一次
+    # UTC时间1:15-1:55，对应中国时间9:15-9:55，每5分钟一次
+    - cron: '15,20,25,30,35,40,45,50,55 1 * * 1-5'
+    # UTC时间2:00-6:59，对应中国时间10:00-14:59，每5分钟一次
+    - cron: '*/5 2-6 * * 1-5'
+    # UTC时间7:00-7:15，对应中国时间15:00-15:15，每5分钟一次
+    - cron: '0,5,10,15 7 * * 1-5'
 
 jobs:
-  deploy:
+  build-and-monitor:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -16,12 +24,36 @@ jobs:
         with:
           node-version: '18.x'
       
-      - name: Install dependencies
+      # Step 1: Build web project first
+      - name: Install web dependencies
         run: cd web && npm install
       
-      - name: Build project
+      - name: Build web project
         run: cd web && npm run build
       
+      # Step 2: Run monitor script to fetch latest stock data
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Run monitor script
+        run: node run-monitor.js
+      
+      # Step 3: Copy data folder to web/dist
+      - name: Copy data folder to web/dist
+        run: mkdir -p web/dist/data && cp -r data/* web/dist/data/
+      
+      # Commit and push monitor data
+      - name: Commit monitor data
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add data/
+          git commit -m 'Update monitor data' || echo "No changes to commit"
+      
+      - name: Push monitor data
+        run: git push origin main || echo "Failed to push data"
+      
+      # Deploy to GitHub Pages on each schedule run
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
