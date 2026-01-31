@@ -41,11 +41,7 @@ function saveMonitorData(data) {
     fs.writeFileSync(dataFile, JSON.stringify(existingData, null, 2));
 }
 
-// 引入测试模块
-const { testEastMoneyPagination } = require('../test/index');
 
-// 导出log和monitorApi函数供测试使用
-module.exports = { log, monitorApi };
 
 // 监控单个接口
 async function monitorApi(apiConfig) {
@@ -104,12 +100,6 @@ async function monitorApi(apiConfig) {
         
         log(`API ${apiConfig.name} 第${monitorData.page}页监控成功 - 响应时间: ${responseTime}ms - 状态码: ${response.status}${isJsonp ? ' (JSONP)' : ''}`);
         saveMonitorData(monitorData);
-        
-        // 检查是否需要分页查询（仅针对东方财富股票数据接口）
-        if (apiConfig.name === '东方财富股票数据') {
-            await testEastMoneyPagination(apiConfig, monitorApi, log);
-        }
-        
         return monitorData;
     } catch (error) {
         const endTime = Date.now();
