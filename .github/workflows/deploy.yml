@@ -24,26 +24,18 @@ jobs:
       
       - name: Build web project
         run: cd web && npm run build
-      
-      # Step 2: Run monitor script to fetch latest stock data
-      - name: Install dependencies
-        run: npm install
-      
-      # - name: Run monitor script
-      #   run: node src/run-monitor.js
-      
+     
       # Step 3: Copy data folder to web/dist
       - name: Copy data folder to web/dist
         run: mkdir -p web/dist/data && cp -r web/public/data/* web/dist/data/
       
-      # 验证构建产物
-      - name: Verify build artifacts
-        run: ls -la web/dist/
-      
-      # Deploy to GitHub Pages on each schedule run
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3.0.1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./web/dist
-          publish_branch: gh-pages
+          # Upload entire repository
+          path: './web/dist/'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4.0.5
