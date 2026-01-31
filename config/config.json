@@ -1,0 +1,14 @@
+{
+  "apis": [
+    {
+      "name": "示例API监控",
+      "url": "https://jsonplaceholder.typicode.com/posts/1",
+      "method": "GET",
+      "cron": "*/5 * * * *",
+      "timeout": 5000,
+      "headers": {},
+      "params": {},
+      "data": {}
+    }
+  ]
+}

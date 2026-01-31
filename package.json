@@ -1,0 +1,25 @@
+{
+  "name": "web-monitor",
+  "version": "1.0.0",
+  "description": "基于Node.js和Express的接口监控系统，用于定期监听接口获取数据",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "node.js",
+    "express",
+    "monitoring",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.13.4",
+    "express": "^5.2.1",
+    "node-cron": "^3.0.2"
+  }
+}
