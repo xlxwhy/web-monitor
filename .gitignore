@@ -83,7 +83,8 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+# 不忽略web/dist目录，用于GitHub Pages部署
+# dist
 
 # Gatsby files
 .cache/
