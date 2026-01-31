@@ -47,7 +47,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory('/web-monitor/'),
+  history: createWebHistory('/'),
   routes
 })
 
