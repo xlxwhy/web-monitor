@@ -170,9 +170,19 @@ function saveMonitorData(monitorData, date = null) {
         csvContent += rowContent;
     });
     
-    // 1. 覆盖写入每日汇总CSV文件（每个文件只包含一天的数据）
-    fs.writeFileSync(dataFile, csvContent);
-    log(`API ${apiName} 第${monitorData.page}页数据覆盖写入CSV文件: ${dataFile}, 共 ${stockData.length} 条记录`);
+    // 1. 写入每日汇总CSV文件（追加模式，标题行只写一次）
+    if (!fs.existsSync(dataFile)) {
+        // 文件不存在时，写入完整内容（包括标题行）
+        fs.writeFileSync(dataFile, csvContent);
+        log(`API ${apiName} 第${monitorData.page}页数据写入CSV文件: ${dataFile}, 共 ${stockData.length} 条记录`);
+    } else {
+        // 文件存在时，只写入数据行（不包括标题行）
+        const dataRows = csvContent.split('\n').slice(1).join('\n');
+        if (dataRows.trim()) {
+            fs.appendFileSync(dataFile, dataRows + '\n');
+            log(`API ${apiName} 第${monitorData.page}页数据追加写入CSV文件: ${dataFile}, 共 ${stockData.length} 条记录`);
+        }
+    }
 
     // 2. 然后从daily文件中读取最新写入的数据，按股票维度补充到stock目录
     const addedLines = csvContent.trim().split('\n');

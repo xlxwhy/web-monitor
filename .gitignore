@@ -90,6 +90,9 @@ dist
 # Comment in the public line in if your project uses Gatsby and not Next.js
 # public
 
+# Data files
+web/public/data/
+
 # vuepress build output
 .vuepress/dist
 

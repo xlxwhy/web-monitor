@@ -42,6 +42,12 @@ app.use('/web-monitor', express.static(staticDir));
 log(`静态文件目录已设置为: ${staticDir}`);
 log('静态文件访问路径前缀: /web-monitor');
 
+// 添加public目录的静态文件映射，用于访问数据文件
+const publicDir = path.join(__dirname, '../web/public');
+app.use('/data', express.static(path.join(publicDir, 'data')));
+log(`数据文件目录已设置为: ${path.join(publicDir, 'data')}`);
+log('数据文件访问路径前缀: /data')
+
 // 使用监控工具模块中的数据存储函数
 
 
