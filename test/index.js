@@ -144,7 +144,7 @@ if (require.main === module) {
             saveMonitorData(monitorData);
             
             // 检查是否需要分页查询（仅针对东方财富股票数据接口）
-            if (apiConfig.name === '东方财富股票数据') {
+            if (apiConfig.name === 'EastmoneyStockData') {
                 await testEastMoneyPagination(apiConfig, monitorApi, log);
             }
             
@@ -172,8 +172,8 @@ if (require.main === module) {
     }
     
     // 从配置文件获取API配置
-    const config = require('../config/config.json');
-    const eastmoneyApiConfig = config.apis.find(api => api.name === '东方财富股票数据');
+    const config = require('../config/apis.json');
+    const eastmoneyApiConfig = config.apis.find(api => api.name === 'EastmoneyStockData');
     
     if (eastmoneyApiConfig) {
         log('开始单独运行东方财富股票数据接口测试...');

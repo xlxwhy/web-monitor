@@ -1,0 +1,41 @@
+{
+  "apis": [
+    {
+      "name": "EastmoneyStockData",
+      "url": "https://push2.eastmoney.com/api/qt/clist/get",
+      "method": "GET",
+      "cron": "*/10 * * * *",
+      "timeout": 15000,
+      "delay": 3000,
+      "headers": {
+        "accept": "*/*",
+        "accept-language": "zh-CN,zh;q=0.9",
+        "sec-ch-ua": "\"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"144\", \"Google Chrome\";v=\"144\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "sec-fetch-dest": "script",
+        "sec-fetch-mode": "no-cors",
+        "sec-fetch-site": "same-site",
+        "cookie": "qgqp_b_id=9cc772eb709a39db1c4b1d3b2b495a61; st_nvi=StElb_rG-RpI_HE0vyBpB9c9e; websitepoptg_api_time=1769867966034; st_si=44463858312761; st_asi=delete; nid18=0563d7566b25544d0943c0d75888e95d; nid18_create_time=1769867966911; gviem=R6q8H41seQsllHdT5rGKOc1e1; gviem_create_time=1769867966911; fullscreengg=1; fullscreengg2=1; st_pvi=30631043291011; st_sp=2025-08-26%2009%3A37%3A58; st_inirUrl=https%3A%2F%2Fwww.baidu.com%2Flink; st_sn=5; st_psi=20260131224516302-113200301321-1456374353",
+        "Referer": "https://quote.eastmoney.com/center/gridlist.html"
+      },
+      "params": {
+        "np": 1,
+        "fltt": 1,
+        "invt": 2,
+        "cb": "jQuery371038734839897238416_1769870715814",
+        "fs": "m:0+t:6+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2,m:0+t:81+s:262144+f:!2",
+        "fields": "f12,f13,f14,f1,f2,f4,f3,f152,f5,f6,f7,f15,f18,f16,f17,f10,f8,f9,f23",
+        "fid": "f12",
+        "pn": 1,
+        "pz": 100,
+        "po": 0,
+        "dect": 1,
+        "ut": "fa5fd1943c7b386f172d6893dbfba10b",
+        "wbp2u": "|0|0|0|web",
+        "_": 1769870715822
+      },
+      "data": {}
+    }
+  ]
+}
