@@ -100,13 +100,8 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const searchQuery = ref('')
-// 使用中国时区（Asia/Shanghai）获取当天日期
-const selectedDate = ref(new Date().toLocaleDateString('zh-CN', {
-  timeZone: 'Asia/Shanghai',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit'
-}).replace(/\//g, '-'))
+// 暂时硬编码默认日期为2026-02-01，用于测试
+const selectedDate = ref('2026-02-01')
 
 // 表格数据
 const tableData = ref([])
@@ -117,44 +112,80 @@ const router = useRouter()
 
 // CSV解析函数
 const parseCSV = (csvText) => {
-  const lines = csvText.split('\n')
-  const headers = lines[0].split(',')
-  const data = []
+  // 处理被错误换行的CSV数据
+  const lines = [];
+  const headerLine = csvText.split('\n')[0].trim();
+  const headers = headerLine.split(',');
+  const expectedFields = headers.length;
+  
+  let currentLine = '';
+  const allLines = csvText.split('\n');
+  
+  for (let i = 0; i < allLines.length; i++) {
+    const line = allLines[i].trim();
+    if (!line) continue;
+    
+    if (currentLine) {
+      // 合并行
+      currentLine += line;
+    } else {
+      // 新行
+      currentLine = line;
+    }
+    
+    // 检查当前行是否以逗号结尾（表示被换行拆分）
+    if (!currentLine.endsWith(',')) {
+      // 不以逗号结尾，认为是完整行
+      lines.push(currentLine);
+      currentLine = '';
+    }
+  }
+  
+  // 如果还有未处理完的行，也添加进去
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  const data = [];
   
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim()
-    if (!line) continue
+    const line = lines[i].trim();
+    if (!line) continue;
     
-    const values = line.split(',')
-    if (values.length !== headers.length) continue
+    const values = line.split(',');
     
-    const row = {}
+    // 确保有足够的字段
+    if (values.length < expectedFields) {
+      console.warn(`行 ${i} 字段数不足: 预期 ${expectedFields}, 实际 ${values.length}`);
+      continue;
+    }
+    
+    const row = {};
     headers.forEach((header, index) => {
-      row[header.trim()] = values[index].trim()
-    })
+      row[header.trim()] = values[index] ? values[index].trim() : '';
+    });
     
     // 转换数据类型
-    // 使用每日汇总文件的字段名，同时兼容单个股票文件的字段名
-    row.price = parseFloat(row.f2) || parseFloat(row.f43) || 0
-    row.change = parseFloat(row.f1) || parseFloat(row.f44) || 0
-    row.changePercent = parseFloat(row.f3) || parseFloat(row.f45) || 0
-    row.volume = parseInt(row.f5) || parseInt(row.f46) || 0
-    row.turnover = parseFloat(row.f6) || parseFloat(row.f47) || 0
+    row.price = parseFloat(row.f2) || parseFloat(row.f43) || 0;
+    row.change = parseFloat(row.f1) || parseFloat(row.f44) || 0;
+    row.changePercent = parseFloat(row.f3) || parseFloat(row.f45) || 0;
+    row.volume = parseInt(row.f5) || parseInt(row.f46) || 0;
+    row.turnover = parseFloat(row.f6) || parseFloat(row.f47) || 0;
     
     // 处理不同文件的字段名差异
-    row.code = row.f12 || row.f57 || ''
-    row.name = row.f14 || row.f58 || ''
-    row.date = row.date || new Date().toISOString().split('T')[0]
+    row.code = row.f12 || row.f57 || '';
+    row.name = row.f14 || row.f58 || '';
+    row.date = row.date || new Date().toISOString().split('T')[0];
     
     // 将日期格式从YYYYMMDD转换为YYYY-MM-DD
     if (row.date && row.date.length === 8) {
-      row.date = `${row.date.substring(0, 4)}-${row.date.substring(4, 6)}-${row.date.substring(6, 8)}`
+      row.date = `${row.date.substring(0, 4)}-${row.date.substring(4, 6)}-${row.date.substring(6, 8)}`;
     }
     
-    data.push(row)
+    data.push(row);
   }
   
-  return data
+  return data;
 }
 
 // 查看历史数据
@@ -181,8 +212,10 @@ const getStockData = async () => {
     }
     
     const date = selectedDate.value || getChinaToday()
+    console.log('当前日期:', date)
     const fileName = `EastmoneyStockData_${date}.csv`
     const filePath = `/data/daily/${fileName}`
+    console.log('尝试加载的文件路径:', filePath)
     
     // 直接从public目录读取CSV文件
     const response = await fetch(filePath)
@@ -201,7 +234,10 @@ const getStockData = async () => {
     }
     
     const csvText = await response.text()
+    console.log('CSV文件大小:', csvText.length, '字符')
+    console.log('原始行数:', csvText.split('\n').length)
     let allData = parseCSV(csvText)
+    console.log('解析后的数据行数:', allData.length)
     
     // 应用搜索过滤
     if (searchQuery.value) {
