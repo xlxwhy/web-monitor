@@ -78,6 +78,7 @@
 import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import { ElMessage, ElLoading } from 'element-plus'
+import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 
 // 股票编号
@@ -95,6 +96,8 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 // 图表实例
 let chartInstance = null
+// 路由对象
+const route = useRoute()
 
 // CSV解析函数
 const parseCSV = (csvText) => {
@@ -267,7 +270,23 @@ const handleResize = () => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
+  // 检查路由参数中是否有股票代码
+  if (route.query.code) {
+    stockCode.value = route.query.code
+    getStockHistory()
+  }
 })
+
+// 监听路由参数变化
+watch(
+  () => route.query.code,
+  (newCode) => {
+    if (newCode) {
+      stockCode.value = newCode
+      getStockHistory()
+    }
+  }
+)
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)

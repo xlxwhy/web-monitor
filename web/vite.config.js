@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [vue()],
   base: '/web-monitor/',
   build: {
-    outDir: '../src/web/public'
+    outDir: 'dist'
   }
 })

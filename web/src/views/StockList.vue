@@ -64,6 +64,13 @@
         <el-table-column prop="volume" label="成交量(手)" width="150" />
         <el-table-column prop="turnover" label="成交额(万元)" width="150" />
         <el-table-column prop="date" label="更新时间" width="180" />
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="scope">
+            <el-button size="small" type="primary" @click="viewHistory(scope.row)">
+              历史数据
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
       
       <div class="pagination">
@@ -86,18 +93,27 @@
 import { ref, onMounted } from 'vue'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElLoading } from 'element-plus'
+import { useRouter } from 'vue-router'
 
 // 分页参数
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const searchQuery = ref('')
-const selectedDate = ref('')
+// 使用中国时区（Asia/Shanghai）获取当天日期
+const selectedDate = ref(new Date().toLocaleDateString('zh-CN', {
+  timeZone: 'Asia/Shanghai',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+}).replace(/\//g, '-'))
 
 // 表格数据
 const tableData = ref([])
 const loading = ref(false)
 const isRefreshing = ref(false)
+// 路由对象
+const router = useRouter()
 
 // CSV解析函数
 const parseCSV = (csvText) => {
@@ -118,15 +134,16 @@ const parseCSV = (csvText) => {
     })
     
     // 转换数据类型
-    row.price = parseFloat(row.f43) || 0
-    row.change = parseFloat(row.f44) || 0
-    row.changePercent = parseFloat(row.f45) || 0
-    row.volume = parseInt(row.f46) || 0
-    row.turnover = parseFloat(row.f47) || 0
+    // 使用每日汇总文件的字段名，同时兼容单个股票文件的字段名
+    row.price = parseFloat(row.f2) || parseFloat(row.f43) || 0
+    row.change = parseFloat(row.f1) || parseFloat(row.f44) || 0
+    row.changePercent = parseFloat(row.f3) || parseFloat(row.f45) || 0
+    row.volume = parseInt(row.f5) || parseInt(row.f46) || 0
+    row.turnover = parseFloat(row.f6) || parseFloat(row.f47) || 0
     
     // 处理不同文件的字段名差异
-    row.code = row.f57 || row.f12 || ''
-    row.name = row.f58 || row.f14 || ''
+    row.code = row.f12 || row.f57 || ''
+    row.name = row.f14 || row.f58 || ''
     row.date = row.date || new Date().toISOString().split('T')[0]
     
     // 将日期格式从YYYYMMDD转换为YYYY-MM-DD
@@ -140,12 +157,30 @@ const parseCSV = (csvText) => {
   return data
 }
 
+// 查看历史数据
+const viewHistory = (row) => {
+  router.push({
+    name: 'StockHistory',
+    query: { code: row.code }
+  })
+}
+
 // 获取股票数据
 const getStockData = async () => {
   loading.value = true
   try {
     // 构建文件名
-    const date = selectedDate.value || new Date().toISOString().split('T')[0]
+    // 获取中国时区的当天日期，用于默认日期或文件不存在时的fallback
+    const getChinaToday = () => {
+      return new Date().toLocaleDateString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).replace(/\//g, '-')
+    }
+    
+    const date = selectedDate.value || getChinaToday()
     const fileName = `EastmoneyStockData_${date}.csv`
     const filePath = `/data/daily/${fileName}`
     
@@ -153,7 +188,7 @@ const getStockData = async () => {
     const response = await fetch(filePath)
     if (!response.ok) {
       // 如果指定日期的文件不存在，尝试获取最新的文件
-      const latestResponse = await fetch(`/data/daily/EastmoneyStockData_${new Date().toISOString().split('T')[0]}.csv`)
+      const latestResponse = await fetch(`/data/daily/EastmoneyStockData_${getChinaToday()}.csv`)
       if (!latestResponse.ok) {
         throw new Error('未找到股票数据文件')
       }
@@ -223,7 +258,7 @@ const triggerMonitor = async () => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name: 'EastmoneyStockData' })
+      body: JSON.stringify({ apiName: 'EastmoneyStockData' })
     })
     
     if (!response.ok) {
