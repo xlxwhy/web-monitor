@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 加载配置文件
-const config = require('./config/config.json');
+const config = require(path.join(__dirname, '../config/config.json'));
 
 // 创建日志目录
 const logsDir = path.join(__dirname, 'logs');
@@ -42,7 +42,10 @@ function saveMonitorData(data) {
 }
 
 // 引入测试模块
-const { testEastMoneyPagination } = require('../test/eastmoney_test');
+const { testEastMoneyPagination } = require('../test/index');
+
+// 导出log和monitorApi函数供测试使用
+module.exports = { log, monitorApi };
 
 // 监控单个接口
 async function monitorApi(apiConfig) {
