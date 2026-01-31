@@ -54,7 +54,7 @@ if (require.main === module) {
     const fs = require('fs');
     
     // 创建日志目录
-    const logsDir = path.join(__dirname, '../src/logs');
+    const logsDir = path.join(__dirname, '../logs');
     if (!fs.existsSync(logsDir)) {
         fs.mkdirSync(logsDir, { recursive: true });
     }

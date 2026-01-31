@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 const config = require(path.join(__dirname, '../config/config.json'));
 
 // 创建日志目录
-const logsDir = path.join(__dirname, 'logs');
+const logsDir = path.join(__dirname, '../logs');
 if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
 }
