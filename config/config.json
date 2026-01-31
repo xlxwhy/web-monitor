@@ -1,16 +1,6 @@
 {
   "apis": [
     {
-      "name": "示例API监控",
-      "url": "https://jsonplaceholder.typicode.com/posts/1",
-      "method": "GET",
-      "cron": "*/5 * * * *",
-      "timeout": 5000,
-      "headers": {},
-      "params": {},
-      "data": {}
-    },
-    {
       "name": "东方财富股票数据",
       "url": "https://push2.eastmoney.com/api/qt/clist/get",
       "method": "GET",
