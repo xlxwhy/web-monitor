@@ -2,10 +2,10 @@
   "name": "web-monitor",
   "version": "1.0.0",
   "description": "基于Node.js和Express的接口监控系统，用于定期监听接口获取数据",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js",
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
