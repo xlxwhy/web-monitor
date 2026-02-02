@@ -118,3 +118,7 @@ web/public/data/
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# macOS system files
+.DS_Store
+*.DS_Store
