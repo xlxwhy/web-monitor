@@ -47,7 +47,7 @@ const TARGET = "d:/ndev/temp/stock_prediction-based-on-lstm-and-transformer"
 async function main() {
     const start = Date.now();
 
-    let companyFolder = ROOT + "/data/stock/spider/company"
+    let companyFolder = ROOT + "/data/company"
     let targetFolder = TARGET + "/stock_daily/kline/V00001"
 
     let cmd = argv[2]
@@ -57,7 +57,7 @@ async function main() {
         case "fetch":
             for (let index = 0; index < codes.length; index++) {
                 const code = codes[index];
-                let company = JSON.parse(FileHelper.read(companyFolder + "/" + code + ".dat", true));
+                let company = JSON.parse(FileHelper.read(companyFolder + "/" + code + ".json", true));
                 let klines = await getStockKLines({ f13: company.market, f12: company.code }, null)
                 let file = targetFolder + "/train-" + code + ".csv"
                 if (klines && klines.length > 0) {

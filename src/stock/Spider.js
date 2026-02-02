@@ -193,7 +193,7 @@ function toFiles(data, splitByYear = false){
                 FileHelper.append(file, "\n"+e.klines[index])
             }
         }
-        let path=PATH+"/stock/spider/company/"+e.code+".dat"
+        let path=PATH+"/company/"+e.code+".json"
         e.klines=[]
         FileHelper.write(path, JSON.stringify(e, null, 2), "utf8", true)  
     });

@@ -140,7 +140,11 @@ app.get('/api/stock-kline', async (req, res) => {
         
         // 保存股票基本信息
         const stockInfo = { code: actualCode, market, name: stock.f14, klineCount: klines.length };
-        const infoFile = path.join(stockDataDir, `${actualCode}.json`);
+        const companyDir = path.join(__dirname, '../web/public/data/company');
+        if (!fs.existsSync(companyDir)) {
+            fs.mkdirSync(companyDir, { recursive: true });
+        }
+        const infoFile = path.join(companyDir, `${actualCode}.json`);
         fs.writeFileSync(infoFile, JSON.stringify(stockInfo, null, 2), 'utf8');
         
         log(`股票 ${actualCode} 的K线数据已保存到 ${stockDataDir} 目录下`);
@@ -526,7 +530,11 @@ app.get('/api/batch-stock-kline', async (req, res) => {
                         
                         // 保存股票基本信息
                         const stockInfo = { code: stockCode, market, name: stockName, klineCount: klines.length };
-                        const infoFile = path.join(stockDataDir, `${stockCode}.json`);
+                        const companyDir = path.join(__dirname, '../web/public/data/company');
+                        if (!fs.existsSync(companyDir)) {
+                            fs.mkdirSync(companyDir, { recursive: true });
+                        }
+                        const infoFile = path.join(companyDir, `${stockCode}.json`);
                         fs.writeFileSync(infoFile, JSON.stringify(stockInfo, null, 2), 'utf8');
                         
                         successCount++;
