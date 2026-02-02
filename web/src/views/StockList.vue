@@ -64,10 +64,18 @@
         <el-table-column prop="volume" label="成交量(手)" width="150" />
         <el-table-column prop="turnover" label="成交额(万元)" width="150" />
         <el-table-column prop="date" label="更新时间" width="180" />
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="scope">
-            <el-button size="small" type="primary" @click="viewHistory(scope.row)">
+            <el-button size="small" type="primary" @click="viewHistory(scope.row)" style="margin-right: 8px;">
               历史数据
+            </el-button>
+            <el-button size="small" type="success" @click="fetchHistoricalData(scope.row)" :loading="scope.row.loading" style="margin-right: 8px;">
+              <el-icon v-if="!scope.row.loading"><Download /></el-icon>
+              {{ scope.row.loading ? '获取中...' : '获取历史' }}
+            </el-button>
+            <el-button size="small" type="warning" @click="updateHistoricalData(scope.row)" :loading="scope.row.updating">
+              <el-icon v-if="!scope.row.updating"><Refresh /></el-icon>
+              {{ scope.row.updating ? '更新中...' : '更新历史' }}
             </el-button>
           </template>
         </el-table-column>
@@ -91,7 +99,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { Search, Refresh, Download } from '@element-plus/icons-vue'
 import { ElMessage, ElLoading } from 'element-plus'
 import { useRouter } from 'vue-router'
 
@@ -194,6 +202,66 @@ const viewHistory = (row) => {
     name: 'StockHistory',
     query: { code: row.code }
   })
+}
+
+// 获取历史数据
+const fetchHistoricalData = async (row) => {
+  row.loading = true
+  try {
+    const response = await fetch(`/api/stock-kline?stockCode=${row.code}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('网络请求失败')
+    }
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      ElMessage.success(`成功获取股票 ${row.code} 的历史数据`)
+    } else {
+      ElMessage.error(`获取历史数据失败: ${result.message}`)
+    }
+  } catch (error) {
+    ElMessage.error(`获取历史数据失败: ${error.message}`)
+    console.error('获取历史数据失败:', error)
+  } finally {
+    row.loading = false
+  }
+}
+
+// 更新历史数据
+const updateHistoricalData = async (row) => {
+  row.updating = true
+  try {
+    const response = await fetch(`/api/stock-kline?stockCode=${row.code}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('网络请求失败')
+    }
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      ElMessage.success(`成功更新股票 ${row.code} 的历史数据`)
+    } else {
+      ElMessage.error(`更新历史数据失败: ${result.message}`)
+    }
+  } catch (error) {
+    ElMessage.error(`更新历史数据失败: ${error.message}`)
+    console.error('更新历史数据失败:', error)
+  } finally {
+    row.updating = false
+  }
 }
 
 // 获取股票数据
