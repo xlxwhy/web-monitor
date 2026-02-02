@@ -424,7 +424,7 @@ function parseJsonp(jsonpString) {
 async function getStockKLines(stockOrCode, fromDate, period = 101, adjust = 1, limit = 1000000) {
     try {
         // 添加随机延时，500ms-3000ms
-        const delay = Math.random() * (3000 - 500) + 500;
+        const delay = Math.random() * (500 - 200) + 200;
         await new Promise(resolve => setTimeout(resolve, delay));
         
         // 处理参数：支持stock对象或股票代码字符串

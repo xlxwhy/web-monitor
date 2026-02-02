@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const EastMoney = require('../api/EastMoney.js');
 const { log } = require('../utils/monitor.js');
+// 从新文件导入已完成股票列表工具函数
+const completedStocksUtils = require('../utils/completedStocksUtils.js');
 
 class StockService {
     // 获取股票历史K线数据
@@ -309,7 +311,7 @@ class StockService {
     }
 
     // 批量获取股票K线数据
-    async batchGetStockKline(pageSize, totalPages) {
+    async batchGetStockKline(pageSize, totalPages, completedStocks = new Set()) {
         try {
             // 从查询参数获取配置，默认每页2个，共2页
             const size = parseInt(pageSize) || 2;
@@ -324,13 +326,28 @@ class StockService {
             // 遍历每页
             for (let page = 1; page <= pages; page++) {
                 // 获取当前页的股票列表
+                log(`正在获取第 ${page} 页股票列表...`);
                 const stockPageResult = await EastMoney.getStockPage(page, size);
                 
-                if (!stockPageResult || !stockPageResult.data || !stockPageResult.data.diff) {
-                    log(`第 ${page} 页股票列表获取失败`);
+                if (!stockPageResult) {
+                    log(`第 ${page} 页股票列表获取失败: 未返回结果`);
                     failureCount += size;
                     continue;
                 }
+                
+                if (!stockPageResult.data) {
+                    log(`第 ${page} 页股票列表获取失败: 无data字段`);
+                    failureCount += size;
+                    continue;
+                }
+                
+                if (!stockPageResult.data.diff) {
+                    log(`第 ${page} 页股票列表获取失败: 无diff字段`);
+                    failureCount += size;
+                    continue;
+                }
+                
+                log(`成功获取第 ${page} 页股票列表，共 ${stockPageResult.data.diff.length} 个股票`);
                 
                 const stocks = stockPageResult.data.diff;
                 
@@ -340,6 +357,12 @@ class StockService {
                     const stockCode = stock.f12;
                     const stockName = stock.f14;
                     const market = stock.f13;
+                    
+                    // 检查该股票是否已获取过K线数据
+                    if (completedStocks.has(stockCode)) {
+                        log(`股票 ${stockCode}(${stockName}) 已获取过K线数据，跳过`);
+                        continue;
+                    }
                     
                     try {
                         // 获取当前股票的K线数据
@@ -385,6 +408,12 @@ class StockService {
                                 klineCount: klines.length,
                                 message: `成功获取K线数据`
                             });
+                            
+                            // 每成功获取一个股票的K线数据，立即记录到已完成列表中
+                            completedStocksUtils.addToCompletedStocks(stockCode, completedStocks);
+                            log(`已将股票 ${stockCode}(${stockName}) 标记为已完成`);
+                            // 输出已完成股票的总数
+                            log(`当前已完成获取K线数据的股票总数: ${completedStocks.size}`);
                         } else {
                             log(`未获取到股票 ${stockCode}(${stockName}) 的K线数据`);
                             failureCount++;
@@ -409,10 +438,19 @@ class StockService {
                     }
                     
                     // 添加随机延迟，避免高频请求
-                    const randomDelay = Math.floor(Math.random() * (3000 - 500)) + 500; // 500ms-3000ms
-                    await new Promise(resolve => setTimeout(resolve, randomDelay));
+                        const randomDelay = Math.floor(Math.random() * (500 - 200)) + 200; // 200ms-500ms
+                        await new Promise(resolve => setTimeout(resolve, randomDelay));
                 }
-            }
+                
+                // 每个分页处理完后增加500ms的延时
+                log(`第 ${page} 页股票处理完成，增加500ms分页延时...`);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } // 闭合分页循环
+            
+            // 收集本次成功获取的股票代码（虽然已经实时记录，但仍返回供调用者参考）
+            const newlyCompletedStocks = allResults
+                .filter(item => item.success)
+                .map(item => item.code);
             
             log(`批量获取股票K线数据完成: 成功 ${successCount} 个，失败 ${failureCount} 个`);
             
@@ -422,6 +460,7 @@ class StockService {
                 total: allResults.length,
                 successCount,
                 failureCount,
+                completedStocks: newlyCompletedStocks,
                 data: allResults
             };
         } catch (error) {
