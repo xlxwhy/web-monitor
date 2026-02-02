@@ -5,6 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 
+// 导入EaseMoney工具
+const EaseMoney = require('./utils/EaseMoney.js');
+
 // 导入监控工具模块
 const monitorUtils = require('./utils/monitor');
 const { log, monitorApi, saveMonitorData } = monitorUtils;
@@ -76,6 +79,87 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
         monitoredApis: config.apis.map(api => api.name)
     });
+});
+
+// 获取股票历史K线数据接口
+app.get('/api/stock-kline', async (req, res) => {
+    try {
+        // 兼容两种参数名：stockCode 和 code
+        const { stockCode, code = '000001', market = '0', splitByYear = false } = req.query;
+        const actualCode = stockCode || code;
+        
+        log(`获取股票历史K线数据请求: 股票代码=${actualCode}, 市场类型=${market}, 是否按年份拆分=${splitByYear}`);
+        
+        // 调用EaseMoney.js中的方法获取K线数据
+        // 创建模拟stock对象，包含f12(代码)和f13(市场类型)属性
+        const stock = { f12: actualCode, f13: market, f14: '股票名称' };
+        
+        // 获取所有历史K线数据（fromDate为空表示获取全部）
+        const klines = await EaseMoney.getStockKLines(stock, '');
+        
+        if (!klines || klines.length === 0) {
+            log(`未获取到股票 ${actualCode} 的K线数据`);
+            return res.status(404).json({ error: `未获取到股票 ${actualCode} 的K线数据` });
+        }
+        
+        log(`成功获取股票 ${actualCode} 的K线数据，共 ${klines.length} 条记录`);
+        
+        // 将数据合并到/web/public/data/stock目录下
+        const stockDataDir = path.join(__dirname, '../web/public/data/stock');
+        const codeDir = path.join(stockDataDir, actualCode);
+        
+        // 创建目录
+        if (!fs.existsSync(codeDir)) {
+            fs.mkdirSync(codeDir, { recursive: true });
+        }
+        
+        // 保存数据
+        if (splitByYear === true || splitByYear === 'true') {
+            // 按年份保存数据
+            let lastYear = '';
+            klines.forEach(kline => {
+                const klineDate = kline.split(',')[0];
+                const klineYear = klineDate.substr(0, 4);
+                const file = path.join(codeDir, `${klineYear}.dat`);
+                
+                if (lastYear !== klineYear) {
+                    // 新的年份，覆盖写入
+                    fs.writeFileSync(file, kline, 'utf8');
+                    lastYear = klineYear;
+                } else {
+                    // 同一年份，追加写入
+                    fs.appendFileSync(file, '\n' + kline, 'utf8');
+                }
+            });
+        } else {
+            // 保存为单个文件
+            const file = path.join(codeDir, 'all.dat');
+            // 写入所有数据，使用\n分隔
+            fs.writeFileSync(file, klines.join('\n'), 'utf8');
+        }
+        
+        // 保存股票基本信息
+        const stockInfo = { code: actualCode, market, name: stock.f14, klineCount: klines.length };
+        const infoFile = path.join(stockDataDir, `${actualCode}.json`);
+        fs.writeFileSync(infoFile, JSON.stringify(stockInfo, null, 2), 'utf8');
+        
+        log(`股票 ${actualCode} 的K线数据已保存到 ${stockDataDir} 目录下`);
+        
+        res.json({
+            success: true,
+            message: `成功获取股票 ${actualCode} 的历史K线数据`,
+            data: {
+                code: actualCode,
+                name: stock.f14,
+                market,
+                klineCount: klines.length,
+                dataDir: stockDataDir
+            }
+        });
+    } catch (error) {
+        log(`获取股票历史K线数据失败: ${error.message}`, 'error');
+        res.status(500).json({ error: `获取股票历史K线数据失败: ${error.message}` });
+    }
 });
 
 // 获取apis.json配置的接口
@@ -379,6 +463,123 @@ app.post('/api/trigger-monitor', async (req, res) => {
     } catch (error) {
         log(`手动触发监控任务失败: ${error.message}`, 'error');
         res.status(500).json({ error: `触发监控任务失败: ${error.message}` });
+    }
+});
+
+// 获取股票列表并逐个获取K线数据的批量接口
+app.get('/api/batch-stock-kline', async (req, res) => {
+    try {
+        log('接收到批量获取股票K线数据请求');
+        
+        // 测试参数：每页2个股票，仅测试2页
+        const pageSize = 2;
+        const totalPages = 2;
+        
+        let allResults = [];
+        let successCount = 0;
+        let failureCount = 0;
+        
+        // 遍历每页
+        for (let page = 1; page <= totalPages; page++) {
+            log(`开始处理第 ${page} 页股票数据`);
+            
+            // 获取当前页的股票列表
+            const stockPageResult = await EaseMoney.getStockPage(page, pageSize);
+            
+            if (!stockPageResult || !stockPageResult.data || !stockPageResult.data.diff) {
+                log(`未获取到第 ${page} 页的股票列表数据`);
+                failureCount += pageSize;
+                continue;
+            }
+            
+            const stocks = stockPageResult.data.diff;
+            
+            // 遍历当前页的每个股票
+            for (let i = 0; i < stocks.length; i++) {
+                const stock = stocks[i];
+                const stockCode = stock.f12;
+                const stockName = stock.f14;
+                const market = stock.f13;
+                
+                try {
+                    log(`获取股票 ${stockCode}(${stockName}) 的K线数据`);
+                    
+                    // 获取当前股票的K线数据
+                    const klines = await EaseMoney.getStockKLines(stock, '');
+                    
+                    if (klines && klines.length > 0) {
+                        log(`成功获取股票 ${stockCode}(${stockName}) 的K线数据，共 ${klines.length} 条记录`);
+                        
+                        // 将数据保存到文件系统（和/api/stock-kline接口保持一致）
+                        const stockDataDir = path.join(__dirname, '../web/public/data/stock');
+                        const codeDir = path.join(stockDataDir, stockCode);
+                        
+                        // 创建目录
+                        if (!fs.existsSync(codeDir)) {
+                            fs.mkdirSync(codeDir, { recursive: true });
+                        }
+                        
+                        // 保存为单个文件
+                        const file = path.join(codeDir, 'all.dat');
+                        // 写入所有数据，使用\n分隔
+                        fs.writeFileSync(file, klines.join('\n'), 'utf8');
+                        
+                        // 保存股票基本信息
+                        const stockInfo = { code: stockCode, market, name: stockName, klineCount: klines.length };
+                        const infoFile = path.join(stockDataDir, `${stockCode}.json`);
+                        fs.writeFileSync(infoFile, JSON.stringify(stockInfo, null, 2), 'utf8');
+                        
+                        successCount++;
+                        allResults.push({
+                            code: stockCode,
+                            name: stockName,
+                            market,
+                            success: true,
+                            klineCount: klines.length,
+                            message: `成功获取K线数据`
+                        });
+                    } else {
+                        log(`未获取到股票 ${stockCode}(${stockName}) 的K线数据`);
+                        failureCount++;
+                        allResults.push({
+                            code: stockCode,
+                            name: stockName,
+                            market,
+                            success: false,
+                            message: `未获取到K线数据`
+                        });
+                    }
+                } catch (error) {
+                    log(`获取股票 ${stockCode}(${stockName}) 的K线数据失败: ${error.message}`, 'error');
+                    failureCount++;
+                    allResults.push({
+                        code: stockCode,
+                        name: stockName,
+                        market,
+                        success: false,
+                        message: `获取K线数据失败: ${error.message}`
+                    });
+                }
+                
+                // 添加随机延迟，避免高频请求
+                const randomDelay = Math.floor(Math.random() * 2000) + 1000; // 1-3秒
+                await new Promise(resolve => setTimeout(resolve, randomDelay));
+            }
+        }
+        
+        log(`批量获取股票K线数据完成: 成功 ${successCount} 个，失败 ${failureCount} 个`);
+        
+        res.json({
+            success: true,
+            message: `批量获取股票K线数据完成`,
+            total: allResults.length,
+            successCount,
+            failureCount,
+            data: allResults
+        });
+    } catch (error) {
+        log(`批量获取股票K线数据失败: ${error.message}`, 'error');
+        res.status(500).json({ error: `批量获取股票K线数据失败: ${error.message}` });
     }
 });
 
