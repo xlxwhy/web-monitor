@@ -58,10 +58,14 @@ async function main() {
             for (let index = 0; index < codes.length; index++) {
                 const code = codes[index];
                 let company = JSON.parse(FileHelper.read(companyFolder + "/" + code + ".json", true));
-                let klines = await getStockKLines({ f13: company.market, f12: company.code }, null)
+                let klineResult = await getStockKLines({ f13: company.market, f12: company.code }, null)
                 let file = targetFolder + "/train-" + code + ".csv"
-                if (klines && klines.length > 0) {
-                    let content=klines.join("\n") 
+                if (klineResult && klineResult.klines && klineResult.klines.length > 0) {
+                    // 将JSON对象转换为CSV格式字符串
+                    const klineStrings = klineResult.klines.map(kline => 
+                        `${kline.date},${kline.open},${kline.close},${kline.high},${kline.low},${kline.volume},${kline.amount},${kline.amplitude},${kline.changeRate},${kline.changeAmount},${kline.turnover}`
+                    );
+                    let content = klineStrings.join("\n")
                     FileHelper.write(file, content)
                 }
             }

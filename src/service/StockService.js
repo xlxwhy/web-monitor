@@ -19,7 +19,12 @@ class StockService {
             const stock = { f12: actualCode, f13: market, f14: '股票名称' };
             
             // 获取所有历史K线数据（fromDate为空表示获取全部）
-            const klines = await EastMoney.getStockKLines(stock, '');
+            const klineResult = await EastMoney.getStockKLines(stock, '');
+            log(`[DEBUG] klineResult: ${JSON.stringify(klineResult, null, 2)}`);
+            
+            // 确保klines是数组
+            const klines = Array.isArray(klineResult.klines) ? klineResult.klines : [];
+            log(`[DEBUG] klines类型: ${typeof klines}, 长度: ${klines.length}`);
             
             if (!klines || klines.length === 0) {
                 log(`未获取到股票 ${actualCode} 的K线数据`);
@@ -42,24 +47,30 @@ class StockService {
                 // 按年份保存数据
                 let lastYear = '';
                 klines.forEach(kline => {
-                    const klineDate = kline.split(',')[0];
+                    const klineDate = kline.date;
                     const klineYear = klineDate.substr(0, 4);
                     const file = path.join(codeDir, `${klineYear}.dat`);
                     
                     if (lastYear !== klineYear) {
                         // 新的年份，覆盖写入
-                        fs.writeFileSync(file, kline, 'utf8');
+                        const klineString = `${kline.date},${kline.open},${kline.close},${kline.high},${kline.low},${kline.volume},${kline.amount},${kline.amplitude},${kline.changeRate},${kline.changeAmount},${kline.turnover}`;
+                        fs.writeFileSync(file, klineString, 'utf8');
                         lastYear = klineYear;
                     } else {
                         // 同一年份，追加写入
-                        fs.appendFileSync(file, '\n' + kline, 'utf8');
+                        const klineString = `${kline.date},${kline.open},${kline.close},${kline.high},${kline.low},${kline.volume},${kline.amount},${kline.amplitude},${kline.changeRate},${kline.changeAmount},${kline.turnover}`;
+                        fs.appendFileSync(file, '\n' + klineString, 'utf8');
                     }
                 });
             } else {
                 // 保存为单个文件
                 const file = path.join(codeDir, 'all.dat');
+                // 将JSON对象转换为CSV格式字符串
+                const klineStrings = klines.map(kline => 
+                    `${kline.date},${kline.open},${kline.close},${kline.high},${kline.low},${kline.volume},${kline.amount},${kline.amplitude},${kline.changeRate},${kline.changeAmount},${kline.turnover}`
+                );
                 // 写入所有数据，使用\n分隔
-                fs.writeFileSync(file, klines.join('\n'), 'utf8');
+                fs.writeFileSync(file, klineStrings.join('\n'), 'utf8');
             }
             
             // 保存股票基本信息
@@ -322,7 +333,6 @@ class StockService {
                 }
                 
                 const stocks = stockPageResult.data.diff;
-                log(`第 ${page} 页获取到 ${stocks.length} 个股票`);
                 
                 // 遍历当前页的每个股票
                 for (let i = 0; i < stocks.length; i++) {
@@ -350,8 +360,12 @@ class StockService {
                             
                             // 保存为单个文件
                             const file = path.join(codeDir, 'all.dat');
+                            // 将JSON对象转换为CSV格式字符串
+                            const klineStrings = klines.map(kline => 
+                                `${kline.date},${kline.open},${kline.close},${kline.high},${kline.low},${kline.volume},${kline.amount},${kline.amplitude},${kline.changeRate},${kline.changeAmount},${kline.turnover}`
+                            );
                             // 写入所有数据，使用\n分隔
-                            fs.writeFileSync(file, klines.join('\n'), 'utf8');
+                            fs.writeFileSync(file, klineStrings.join('\n'), 'utf8');
                             
                             // 保存股票基本信息
                             const stockInfo = { code: stockCode, market, name: stockName, klineCount: klines.length };
@@ -395,7 +409,7 @@ class StockService {
                     }
                     
                     // 添加随机延迟，避免高频请求
-                    const randomDelay = Math.floor(Math.random() * 3000) + 2000; // 2-5秒
+                    const randomDelay = Math.floor(Math.random() * (3000 - 500)) + 500; // 500ms-3000ms
                     await new Promise(resolve => setTimeout(resolve, randomDelay));
                 }
             }

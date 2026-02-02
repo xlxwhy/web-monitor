@@ -254,12 +254,6 @@ async function fetchWithRetry(url, maxRetries = 5, delay = 2000) {
             // 使用与成功示例完全相同的Cookie
             const cookie = savedCookie || 'qgqp_b_id=9cc772eb709a39db1c4b1d3b2b495a61; st_nvi=StElb_rG-RpI_HE0vyBpB9c9e; websitepoptg_api_time=1769867966034; nid18=0563d7566b25544d0943c0d75888e95d; nid18_create_time=1769867966911; gviem=R6q8H41seQsllHdT5rGKOc1e1; gviem_create_time=1769867966911; st_si=31051700001943; fullscreengg=1; fullscreengg2=1; p_origin=https%3A%2F%2Fpassport2.eastmoney.com; mtp=1; sid=122901040; vtpst=|; st_asi=delete; st_sn=34; st_psi=20260202104034513-113200301321-3494045981; st_pvi=30631043291011; st_sp=2025-08-26%2009%3A37%3A58; st_inirUrl=https%3A%2F%2Fwww.baidu.com%2Flink';
             
-            // 记录请求信息
-            console.log(`[API请求] URL: ${url}`);
-            console.log(`[API请求] UserAgent: ${userAgent}`);
-            console.log(`[API请求] Cookie: 已设置`);
-            console.log(`[API请求] 重试次数: ${retries}`);
-            
             // 使用axios发送请求，配置与成功示例完全一致
             const response = await axios.get(url, {
                 headers: {
@@ -292,23 +286,13 @@ async function fetchWithRetry(url, maxRetries = 5, delay = 2000) {
                 responseType: 'text' // 直接获取文本响应
             });
             
-            // 记录响应信息
-            console.log(`[API响应] 状态码: ${response.status}`);
-            console.log(`[API响应] 响应头: ${JSON.stringify(response.headers)}`);
-            console.log(`[API响应] 响应体长度: ${response.data.length}`);
-            
             return response;
         } catch (error) {
-            console.error(`[API错误] 请求失败: ${error.message}`);
-            console.error(`[API错误] 完整错误堆栈: ${error.stack}`);
-            
             retries++;
             if (retries > maxRetries) {
-                console.error(`[API错误] 超过最大重试次数 (${maxRetries})，请求彻底失败`);
                 throw error;
             }
             
-            console.log(`[API重试] 等待 ${delay}ms 后重试...`);
             await new Promise(resolve => setTimeout(resolve, delay));
             // 指数退避策略，增加延迟时间
             delay *= 2;
@@ -439,14 +423,9 @@ function parseJsonp(jsonpString) {
 // limit: 返回数据条数限制
 async function getStockKLines(stockOrCode, fromDate, period = 101, adjust = 1, limit = 1000000) {
     try {
-        // 记录方法调用参数
-        console.log(`[getStockKLines] 调用参数:`, {
-            stockOrCode: typeof stockOrCode === 'string' ? stockOrCode : `${stockOrCode.f12} (对象)`,
-            fromDate,
-            period,
-            adjust,
-            limit
-        });
+        // 添加随机延时，500ms-3000ms
+        const delay = Math.random() * (3000 - 500) + 500;
+        await new Promise(resolve => setTimeout(resolve, delay));
         
         // 处理参数：支持stock对象或股票代码字符串
         let stockCode;
@@ -487,17 +466,11 @@ async function getStockKLines(stockOrCode, fromDate, period = 101, adjust = 1, l
             + `&lmt=${limit}`
             + `&_=${TIMESTAMP}`;
         
-        // 记录构建的URL
-        console.log(`[getStockKLines] 构建的URL: ${url}`);
-        
         // 发送请求并安全解析JSONP响应
         const response = await fetchWithRetry(url);
         const result = parseJsonp(response.data);
         
         if (result && result.data && result.data.klines) {
-            // 记录原始K线数据条数
-            console.log(`[getStockKLines] 原始K线数据条数: ${result.data.klines.length}`);
-            
             // 解析K线数据为JSON对象格式
             const parsedKLines = result.data.klines.map(line => {
                 const [date, open, close, high, low, volume, amount, amplitude, changeRate, changeAmount, turnover] = line.split(',');
@@ -516,13 +489,6 @@ async function getStockKLines(stockOrCode, fromDate, period = 101, adjust = 1, l
                 };
             });
             
-            // 记录解析后的K线数据统计信息
-            console.log(`[getStockKLines] 解析后的K线数据条数: ${parsedKLines.length}`);
-            if (parsedKLines.length > 0) {
-                console.log(`[getStockKLines] 数据时间范围: 从 ${parsedKLines[0].date} 到 ${parsedKLines[parsedKLines.length - 1].date}`);
-                console.log(`[getStockKLines] 最新收盘价: ${parsedKLines[parsedKLines.length - 1].close}`);
-            }
-            
             // 返回包含原始数据和解析后数据的完整结果
             const returnResult = {
                 stockCode,
@@ -533,15 +499,6 @@ async function getStockKLines(stockOrCode, fromDate, period = 101, adjust = 1, l
                 klines: parsedKLines,
                 rawData: result.data // 保留原始数据，方便扩展
             };
-            
-            // 记录返回结果的基本信息
-            console.log(`[getStockKLines] 返回结果信息:`, {
-                stockCode: returnResult.stockCode,
-                market: returnResult.market,
-                period: returnResult.period,
-                adjust: returnResult.adjust,
-                count: returnResult.count
-            });
             
             return returnResult;
         } else {
@@ -590,7 +547,9 @@ async function fetchData(type, startPage, pages, size, fromDate){
                 //random time
                 await Helper.sleep(parseInt(Math.random()*10))
                 //klines
-                let klines=(type=="Stock")?await getStockKLines(e,fromDate) : await getIndustryKLines(e.f12,fromDate) 
+                let klinesResult = (type=="Stock") ? await getStockKLines(e,fromDate) : await getIndustryKLines(e.f12,fromDate);
+                // 确保klines是数组
+                const klines = (type=="Stock") ? klinesResult.klines : klinesResult;
                 let data={code:e.f12,name:e.f14,market:e.f13,klines:klines}
                 toFiles([data])
                 //
