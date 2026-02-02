@@ -475,9 +475,9 @@ app.get('/api/batch-stock-kline', async (req, res) => {
     try {
         log('接收到批量获取股票K线数据请求');
         
-        // 测试参数：每页2个股票，仅测试2页
-        const pageSize = 2;
-        const totalPages = 2;
+        // 从查询参数获取配置，默认每页2个，共2页
+        const pageSize = parseInt(req.query.pageSize) || 2;
+        const totalPages = parseInt(req.query.totalPages) || 2;
         
         let allResults = [];
         let successCount = 0;
