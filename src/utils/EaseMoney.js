@@ -16,8 +16,95 @@ async function getIndustryList(page,size){
     return result.data.diff
 }
 
+// 调用验证码检查接口，避免被服务器hand up
+async function checkUser() {
+    const checkUserUrl = 'https://i.eastmoney.com/websitecaptcha/api/checkuser?callback=wsc_checkuser';
+    
+    // 使用随机User-Agent
+    const userAgents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/126.0'
+    ];
+    const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+    
+    // 生成随机的Cookie值
+    const randomCookie = `qgqp_b_id=${generateRandomString(32)}; st_nvi=${generateRandomString(20)}; websitepoptg_api_time=${Date.now()}; nid18=${generateRandomString(32)}; nid18_create_time=${Date.now()}; gviem=${generateRandomString(20)}; gviem_create_time=${Date.now()}; st_si=${Math.floor(Math.random() * 1000000000000)}; fullscreengg=1; fullscreengg2=1; p_origin=https%3A%2F%2Fpassport2.eastmoney.com; mtp=1; sid=${Math.floor(Math.random() * 100000000)}; vtpst=|; st_asi=delete; st_sn=${Math.floor(Math.random() * 100)}; st_psi=${Date.now()}-${Math.floor(Math.random() * 1000000000000)}-${Math.floor(Math.random() * 1000000000)}; st_pvi=${Math.floor(Math.random() * 100000000000000)}; st_sp=${formatDate(new Date())}%20${formatTime(new Date())}; st_inirUrl=https%3A%2F%2Fwww.baidu.com%2Flink`;
+    
+    try {
+        await axios.get(checkUserUrl, {
+            headers: {
+                'accept': '*/*',
+                'accept-language': 'zh-CN,zh;q=0.9',
+                'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"macOS"',
+                'sec-fetch-dest': 'script',
+                'sec-fetch-mode': 'no-cors',
+                'sec-fetch-site': 'same-site',
+                'cookie': randomCookie,
+                'Referer': 'https://quote.eastmoney.com/center/gridlist.html',
+                'User-Agent': randomUserAgent,
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache',
+                'DNT': '1'
+            },
+            timeout: 30000,
+            // 使用keep-alive并设置合理的参数
+            httpAgent: new (require('http').Agent)({ 
+                keepAlive: true,
+                maxSockets: 5,
+                timeout: 30000
+            }),
+            httpsAgent: new (require('https').Agent)({ 
+                keepAlive: true,
+                maxSockets: 5,
+                timeout: 30000,
+                rejectUnauthorized: true
+            })
+        });
+        console.log('验证码检查接口调用成功');
+    } catch (error) {
+        console.warn('验证码检查接口调用失败，但继续执行后续请求:', error.message);
+        // 即使验证码检查失败，也继续执行后续请求
+    }
+}
+
+// 生成随机字符串
+function generateRandomString(length) {
+    const chars = '0123456789abcdef';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// 格式化日期为YYYY-MM-DD
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// 格式化时间为HH:MM:SS
+function formatTime(date) {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+
 // 使用axios发送请求的通用方法，包含重试机制和反爬虫策略
 async function fetchWithRetry(url, retryCount = 0, maxRetries = 5) {
+    // 首先调用验证码检查接口
+    await checkUser();
+    
     // 添加随机延迟避免请求过于频繁（3-8秒）
     const randomDelay = Math.floor(Math.random() * 5000) + 3000;
     await Helper.sleep(randomDelay);
@@ -35,6 +122,9 @@ async function fetchWithRetry(url, retryCount = 0, maxRetries = 5) {
     // 随机选择User-Agent
     const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
     
+    // 生成随机的Cookie值
+    const randomCookie = `qgqp_b_id=${generateRandomString(32)}; st_nvi=${generateRandomString(20)}; websitepoptg_api_time=${Date.now()}; nid18=${generateRandomString(32)}; nid18_create_time=${Date.now()}; gviem=${generateRandomString(20)}; gviem_create_time=${Date.now()}; st_si=${Math.floor(Math.random() * 1000000000000)}; fullscreengg=1; fullscreengg2=1; p_origin=https%3A%2F%2Fpassport2.eastmoney.com; mtp=1; sid=${Math.floor(Math.random() * 100000000)}; vtpst=|; st_asi=delete; st_sn=${Math.floor(Math.random() * 100)}; st_psi=${Date.now()}-${Math.floor(Math.random() * 1000000000000)}-${Math.floor(Math.random() * 1000000000)}; st_pvi=${Math.floor(Math.random() * 100000000000000)}; st_sp=${formatDate(new Date())}%20${formatTime(new Date())}; st_inirUrl=https%3A%2F%2Fwww.baidu.com%2Flink`;
+    
     try {
         const response = await axios.get(url, {
             headers: {
@@ -43,26 +133,33 @@ async function fetchWithRetry(url, retryCount = 0, maxRetries = 5) {
                 'Accept': '*/*',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Accept-Language': 'zh-CN,zh;q=0.9',
-                'Connection': 'close',
+                'Connection': 'keep-alive',
                 'DNT': '1',
                 'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
+                'Pragma': 'no-cache',
+                'cookie': randomCookie,
+                'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"macOS"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-site'
             },
             timeout: 90000, // 增加超时时间到90秒
-            // 禁用keep-alive并使用不同的代理配置
+            // 使用keep-alive并设置合理的参数
             httpAgent: new (require('http').Agent)({ 
-                keepAlive: false,
-                maxSockets: 1,
+                keepAlive: true,
+                maxSockets: 5,
                 timeout: 90000
             }),
             httpsAgent: new (require('https').Agent)({ 
-                keepAlive: false,
-                maxSockets: 1,
+                keepAlive: true,
+                maxSockets: 5,
                 timeout: 90000,
                 rejectUnauthorized: true
             }),
-            // 禁用重定向
-            maxRedirects: 0
+            // 允许重定向
+            maxRedirects: 5
         });
         return response;
     } catch (error) {
